@@ -1,0 +1,17 @@
+{
+  "name": "شقة سيدي بشر",
+  "short_name": "سيدي بشر",
+  "description": "بيت أصحاب، شاي، وذكريات ما تتنسيش.",
+  "start_url": "/",
+  "display": "standalone",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

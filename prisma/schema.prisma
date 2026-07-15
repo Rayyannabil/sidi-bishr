@@ -1,0 +1,348 @@
+// Sidi Bishr Apartment — Community Website Schema
+// MySQL 8 / MariaDB, utf8mb4, InnoDB
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────
+
+enum Role {
+  MEMBER
+  GUEST
+}
+
+enum EventType {
+  HANGOUT
+  IFTAR
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+  FLIP
+}
+
+enum VoteChoice {
+  YES
+  NO
+  ABSTAIN
+}
+
+enum DecisionStatus {
+  PROPOSED
+  APPROVED
+  REJECTED
+  IMPLEMENTED
+}
+
+enum BillCategory {
+  GAS
+  ELECTRICITY
+  WATER
+  INTERNET
+  OTHER
+}
+
+enum NotificationType {
+  NEW_POST
+  NEW_COMMENT
+  REPLY_TO_COMMENT
+  REACTION
+  EVENT_INVITE
+  NEW_EVENT
+  NEW_BADGE
+  NEW_ANNOUNCEMENT
+  NEW_BILL
+  NEW_DECISION
+}
+
+enum BillType {
+  GAS
+  ELECTRICITY
+  WATER
+  INTERNET
+  OTHER
+}
+
+enum DecisionThreshold {
+  MAJORITY
+  TWO_THIRDS
+  UNANIMOUS
+}
+
+enum AnnouncementPriority {
+  NORMAL
+  PINNED
+}
+
+// ─── User & Auth ─────────────────────────────────────────
+
+model User {
+  id                String   @id @default(cuid())
+  name              String
+  email             String   @unique
+  passwordHash      String
+  role              Role     @default(GUEST)
+  avatarUrl         String?
+  canPost           Boolean  @default(false)
+  emailVerified     DateTime?
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  deletedAt         DateTime?
+
+  posts             Post[]
+  comments          Comment[]
+  reactions         Reaction[]
+  events            Event[]
+  memories          Memory[]
+  announcements     Announcement[]
+  bills             Bill[]
+  settlementsFrom   Settlement[] @relation("SettlementFrom")
+  settlementsTo     Settlement[] @relation("SettlementTo")
+  decisions         Decision[]
+  votes             Vote[]
+  badgesAwarded     BadgeAssignment[] @relation("BadgeAwarder")
+  badgesReceived    BadgeAssignment[] @relation("BadgeRecipient")
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+// ─── Feed: Posts ─────────────────────────────────────────
+
+model Post {
+  id          String    @id @default(cuid())
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  content     String    @db.Text
+  imageUrl    String?
+  pinned      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  comments    Comment[]
+  reactions   Reaction[]
+
+  @@index([createdAt])
+  @@map("posts")
+}
+
+// ─── Comments (threaded) ─────────────────────────────────
+
+model Comment {
+  id          String    @id @default(cuid())
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id])
+  authorId    String
+  author      User      @relation(fields: [authorId], references: [id])
+  parentId    String?
+  parent      Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     Comment[] @relation("CommentReplies")
+  content     String    @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  reactions   Reaction[]
+
+  @@index([postId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+// ─── Reactions ───────────────────────────────────────────
+
+model Reaction {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  postId      String?
+  post        Post?        @relation(fields: [postId], references: [id])
+  commentId   String?
+  comment     Comment?     @relation(fields: [commentId], references: [id])
+  type        ReactionType
+  createdAt   DateTime     @default(now())
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@map("reactions")
+}
+
+// ─── Events ──────────────────────────────────────────────
+
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String    @db.Text
+  date        DateTime
+  location    String
+  coverImage  String?
+  type        EventType @default(HANGOUT)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  memories    Memory[]
+
+  @@index([date])
+  @@map("events")
+}
+
+// ─── Memories (photo/video gallery) ──────────────────────
+
+model Memory {
+  id          String    @id @default(cuid())
+  eventId     String
+  event       Event     @relation(fields: [eventId], references: [id])
+  uploadedById String
+  uploadedBy  User      @relation(fields: [uploadedById], references: [id])
+  url         String
+  caption     String?
+  type        String    @default("image") // image | video
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  @@index([eventId])
+  @@map("memories")
+}
+
+// ─── Announcements ───────────────────────────────────────
+
+model Announcement {
+  id          String   @id @default(cuid())
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id])
+  title       String
+  content     String   @db.Text
+  pinned      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@map("announcements")
+}
+
+// ─── Bills & Splitting ───────────────────────────────────
+
+model Bill {
+  id          String      @id @default(cuid())
+  category    BillCategory
+  title       String
+  amount      Decimal     @db.Decimal(10, 2)
+  billDate    DateTime
+  paidById     String
+  paidBy      User        @relation(fields: [paidById], references: [id])
+  splits      BillSplit[]
+  settlements Settlement[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
+
+  @@map("bills")
+}
+
+model BillSplit {
+  id          String   @id @default(cuid())
+  billId      String
+  bill        Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  userId      String
+  amount      Decimal  @db.Decimal(10, 2)
+  settled     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@unique([billId, userId])
+  @@map("bill_splits")
+}
+
+model Settlement {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  fromUser    User      @relation("SettlementFrom", fields: [fromUserId], references: [id])
+  toUserId    String
+  toUser      User      @relation("SettlementTo", fields: [toUserId], references: [id])
+  billId      String?
+  bill        Bill?     @relation(fields: [billId], references: [id])
+  amount      Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  @@map("settlements")
+}
+
+// ─── Decisions & Voting ─────────────────────────────────
+
+model Decision {
+  id          String           @id @default(cuid())
+  title       String
+  description String           @db.Text
+  threshold   DecisionThreshold @default(MAJORITY)
+  status      DecisionStatus   @default(PROPOSED)
+  createdById String
+  createdBy   User             @relation(fields: [createdById], references: [id])
+  votes       Vote[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+
+  @@map("decisions")
+}
+
+model Vote {
+  id          String      @id @default(cuid())
+  decisionId   String
+  decision     Decision    @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  choice       VoteChoice
+  createdAt    DateTime    @default(now())
+
+  @@unique([decisionId, userId])
+  @@map("votes")
+}
+
+// ─── Badges (أوسمة) ─────────────────────────────────────
+
+model BadgeAssignment {
+  id           String    @id @default(cuid())
+  text         String
+  awardedById  String
+  awardedBy    User      @relation("BadgeAwarder", fields: [awardedById], references: [id])
+  recipientId  String
+  recipient    User      @relation("BadgeRecipient", fields: [recipientId], references: [id])
+  createdAt    DateTime  @default(now())
+  revokedAt    DateTime?
+
+  @@index([recipientId])
+  @@map("badge_assignments")
+}
+
+// ─── Notifications ───────────────────────────────────────
+
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  body        String
+  link        String?
+  read        Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  @@index([userId, read])
+  @@map("notifications")
+}

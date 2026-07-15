@@ -1,27 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+:root { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; }
 
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 40 30% 96%;
+    --foreground: 25 15% 18%;
+    --card: 40 30% 99%;
+    --card-foreground: 25 15% 18%;
+    --popover: 40 30% 99%;
+    --popover-foreground: 25 15% 18%;
+    --primary: 173 100% 15%;
+    --primary-foreground: 40 30% 98%;
+    --secondary: 36 45% 90%;
+    --secondary-foreground: 25 15% 20%;
+    --muted: 36 25% 92%;
+    --muted-foreground: 25 8% 42%;
+    --accent: 30 60% 55%;
+    --accent-foreground: 40 30% 15%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 40 30% 98%;
+    --border: 30 15% 85%;
+    --input: 30 15% 85%;
+    --ring: 173 100% 15%;
+    --radius: 0.875rem;
+  }
+
+  .dark {
+    --background: 25 15% 10%;
+    --foreground: 40 30% 90%;
+    --card: 25 15% 14%;
+    --card-foreground: 40 30% 90%;
+    --popover: 25 15% 14%;
+    --popover-foreground: 40 30% 90%;
+    --primary: 173 100% 25%;
+    --primary-foreground: 40 30% 95%;
+    --secondary: 25 12% 20%;
+    --secondary-foreground: 40 30% 85%;
+    --muted: 25 12% 18%;
+    --muted-foreground: 40 10% 55%;
+    --accent: 30 55% 50%;
+    --accent-foreground: 40 30% 15%;
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 40 30% 95%;
+    --border: 25 12% 25%;
+    --input: 25 12% 25%;
+    --ring: 173 100% 25%;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  html {
+    direction: rtl;
+  }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--accent));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--accent) / 0.8);
+}
+
+/* Focus states for accessibility */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }
