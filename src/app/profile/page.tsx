@@ -100,7 +100,7 @@ export default function ProfilePage() {
   }
 
   const isMember = session.user.role === "MEMBER";
-  const avatarUrl = profile?.avatarUrl || session.user.image;
+  const avatarUrl = profile?.avatarUrl || undefined;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
